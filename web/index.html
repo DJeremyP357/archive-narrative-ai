@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>档案数字叙事 AI Agent — 演示控制台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0e12;
+      --panel: #1a1820;
+      --panel2: #24212c;
+      --border: rgba(201, 168, 76, 0.2);
+      --gold: #c9a84c;
+      --gold-dim: #8a7340;
+      --red: #a61c2e;
+      --red-bright: #c41e3a;
+      --text: #e8e0d4;
+      --text-dim: #9a9088;
+      --user-bg: #2a1f24;
+      --bot-bg: #1e2430;
+      --ok: #4caf7a;
+      --err: #e57373;
+      --warn: #ff9800;
+      --info: #2196f3;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "DM Sans", "PingFang SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(166, 28, 46, 0.25), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(201, 168, 76, 0.08), transparent);
+    }
+    .app {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 320px 1fr 320px;
+      grid-template-rows: auto 1fr;
+      gap: 16px;
+      min-height: calc(100vh - 40px);
+    }
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    header h1 {
+      font-family: "Noto Serif SC", serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+    header p { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+    .api-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .api-row input {
+      width: 260px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .status-dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .status-dot.err { background: var(--err); }
+    .status-dot.warn { background: var(--warn); }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-family: "Noto Serif SC", serif;
+      font-size: 0.95rem;
+      color: var(--gold);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .panel-body { padding: 16px; flex: 1; overflow-y: auto; }
+
+    /* Upload */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--gold);
+      background: rgba(201, 168, 76, 0.06);
+    }
+    .dropzone p { font-size: 0.85rem; color: var(--text-dim); margin-top: 8px; }
+    .file-list { margin-top: 12px; font-size: 0.8rem; }
+    .file-item {
+      padding: 8px 10px;
+      background: var(--panel2);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      word-break: break-all;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .file-item .name { color: var(--gold); font-weight: 500; }
+    .file-item .status { margin-left: auto; font-size: 0.75rem; }
+    .file-item .status.ok { color: var(--ok); }
+    .file-item .status.pending { color: var(--warn); }
+
+    label.field { display: block; font-size: 0.75rem; color: var(--text-dim); margin: 12px 0 6px; }
+    select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+    .formats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .formats label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      background: var(--panel2);
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .formats label:hover { background: rgba(201, 168, 76, 0.15); }
+    .formats input[type="checkbox"] { accent-color: var(--gold); }
+    .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.85rem; }
+
+    /* Chat */
+    .chat-main { min-height: 0; }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 300px;
+      max-height: calc(100vh - 400px);
+    }
+    .msg {
+      max-width: 88%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: var(--user-bg);
+      border: 1px solid rgba(196, 30, 58, 0.35);
+      border-bottom-right-radius: 4px;
+    }
+    .msg.assistant {
+      align-self: flex-start;
+      background: var(--bot-bg);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.system {
+      align-self: center;
+      max-width: 95%;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      text-align: center;
+      padding: 4px;
+    }
+    .msg .role-tag {
+      font-size: 0.7rem;
+      color: var(--gold-dim);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .chat-input {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .chat-input textarea {
+      min-height: 60px;
+      resize: vertical;
+    }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button:not(:disabled):hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--red-bright); color: #fff; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dim)); color: #1a1008; }
+    .btn-ghost {
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-sm { padding: 6px 12px; font-size: 0.75rem; }
+
+    /* Workflow Visualization */
+    .workflow-viz {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--panel2);
+      border-radius: 8px;
+      font-size: 0.8rem;
+    }
+    .wf-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .wf-step:last-child { border-bottom: none; }
+    .wf-step .step-num {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      flex-shrink: 0;
+    }
+    .wf-step.running .step-num { background: var(--info); border-color: var(--info); color: #fff; }
+    .wf-step.completed .step-num { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .wf-step.failed .step-num { background: var(--err); border-color: var(--err); color: #fff; }
+    .wf-step .step-name { font-weight: 500; }
+    .wf-step .step-status { margin-left: auto; font-size: 0.75rem; }
+    .wf-step.running .step-status { color: var(--info); }
+    .wf-step.completed .step-status { color: var(--ok); }
+    .wf-step.failed .step-status { color: var(--err); }
+
+    /* Progress Bar */
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--panel2);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--red-bright));
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+    .progress-fill.indeterminate {
+      width: 40% !important;
+      animation: progressShimmer 1.5s ease-in-out infinite;
+    }
+    @keyframes progressShimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+    @keyframes pulseGold {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.6); }
+      50% { box-shadow: 0 0 16px 4px rgba(201, 168, 76, 0.8); }
+    }
+
+    /* Output Preview */
+    .output-preview {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--panel2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .output-preview h4 {
+      color: var(--gold);
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+    .output-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      font-size: 0.8rem;
+    }
+    .output-item a {
+      color: var(--info);
+      text-decoration: none;
+    }
+    .output-item a:hover { text-decoration: underline; }
+
+    /* Gallery Browser */
+    .gallery-browser {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--panel2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .gallery-browser.active { display: block; }
+    .gallery-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .gallery-tab {
+      padding: 6px 14px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: all 0.2s;
+    }
+    .gallery-tab:hover { color: var(--text); }
+    .gallery-tab.active {
+      background: var(--gold);
+      color: #1a1008;
+      border-color: var(--gold);
+      font-weight: 600;
+    }
+    .gallery-content { min-height: 200px; }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .gallery-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .gallery-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--gold);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .gallery-card .card-thumb {
+      width: 100%;
+      height: 120px;
+      background: linear-gradient(135deg, var(--panel2), var(--panel));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    .gallery-card .card-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .gallery-card .card-info {
+      padding: 10px;
+    }
+    .gallery-card .card-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .gallery-card .card-meta {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    /* Preview Modal */
+    .preview-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .preview-modal.active { display: flex; }
+    .preview-container {
+      width: 100%;
+      max-width: 1200px;
+      height: 90vh;
+      background: var(--panel);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .preview-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .preview-header h3 {
+      color: var(--gold);
+      font-family: "Noto Serif SC", serif;
+      font-size: 1rem;
+    }
+    .preview-body {
+      flex: 1;
+      overflow: hidden;
+    }
+    .preview-body iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #fff;
+    }
+    .preview-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 4px 10px;
+    }
+    .preview-close:hover { color: var(--text); }
+
+    /* Sidebar right */
+    .diag-list { font-size: 0.75rem; line-height: 1.5; }
+    .diag-list li { margin-bottom: 4px; color: var(--text-dim); }
+    .diag-list .ok { color: var(--ok); }
+    .agent-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      margin: 2px;
+      background: var(--panel2);
+      border-radius: 4px;
+      font-size: 0.7rem;
+      transition: all 0.2s;
+    }
+    .agent-chip:hover { background: rgba(201, 168, 76, 0.2); }
+    .log-box {
+      margin-top: 12px;
+      padding: 10px;
+      background: #0a090c;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-family: ui-monospace, monospace;
+      max-height: 200px;
+      overflow-y: auto;
+      color: var(--text-dim);
+    }
+    .log-entry { margin-bottom: 4px; }
+    .log-entry .time { color: var(--gold-dim); }
+    .log-entry .agent { color: var(--info); }
+    .log-entry .action { color: var(--text); }
+    .log-entry .detail { color: var(--text-dim); }
+
+    @media (max-width: 1200px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+      }
+      header { grid-column: 1; }
+      .messages { max-height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+    <header>
+      <div>
+        <h1>兰台有言</h1>
+      </div>
+      <div class="api-row">
+        <span class="status-dot" id="statusDot" title="API 连接状态"></span>
+        <label style="font-size:0.8rem;color:var(--text-dim)">API</label>
+        <input type="text" id="apiBase" value="http://127.0.0.1:8080" placeholder="http://127.0.0.1:8080" />
+        <button type="button" class="btn-ghost" id="btnPing">检测连接</button>
+      </div>
+    </header>
+
+    <!-- 左侧：上传与设置 -->
+    <aside class="panel">
+      <div class="panel-head">档案上传与设置</div>
+      <div class="panel-body">
+        <div class="dropzone" id="dropzone">
+          <div style="font-size:2rem">📁</div>
+          <strong>拖拽或点击上传</strong>
+          <p>支持 PDF / Word / 图片 / 音视频 / 文本</p>
+          <input type="file" id="fileInput" multiple hidden
+            accept=".txt,.md,.pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.mp3,.mp4,.wav" />
+        </div>
+        <div class="file-list" id="fileList"></div>
+        <button type="button" class="btn-gold" id="btnUpload" style="width:100%;margin-top:12px" disabled>
+          解析档案 (DocumentParserAgent)
+        </button>
+
+        <label class="field">档案名称（可选）</label>
+        <input type="text" id="archiveNameInput" placeholder="留空则 AI 从聊天内容自动识别" style="width:100%;" />
+        <div id="autoHint" style="display:none;"></div>
+
+        <label class="field">搜索关键词（可编辑）</label>
+        <div id="keywordTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;min-height:28px;">
+          <span style="color:var(--text-dim);font-size:0.75rem;padding:4px 0;">输入聊天内容后自动提取…</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <input type="text" id="keywordInput" placeholder="添加关键词…" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:0.8rem;" />
+          <button type="button" id="btnAddKeyword" class="btn-ghost" style="padding:6px 12px;font-size:0.8rem;">+</button>
+        </div>
+
+        <label class="field">叙事输出格式</label>
+        <div class="formats" id="formatChecks">
+          <label><input type="checkbox" value="html" checked /> HTML 网站</label>
+          <label><input type="checkbox" value="3d" checked /> 3D 展厅</label>
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" id="enableCrawl" checked />
+          无本地文件时爬取网络资料 (WebCrawlerAgent)
+        </label>
+
+        <!-- 工作流可视化（动态生成） -->
+        <label class="field">执行工作流</label>
+        <div class="workflow-viz" id="workflowViz">
+          <div class="wf-step" style="color:var(--text-dim);font-size:0.8rem;text-align:center;padding:12px 0">
+            点击「生成叙事作品」后显示实时工作流
+          </div>
+        </div>
+        <div class="progress-bar" id="progressBar" style="display:none;">
+          <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 中间：对话与产物 -->
+    <main class="panel chat-main">
+      <div class="panel-head">与 Agent 对话</div>
+      <div class="messages" id="messages">
+        <div class="msg system">
+          欢迎使用档案数字叙事 AI Agent 演示控制台。请先点击右上角「检测连接」确保 API 已启动，然后可对话或上传档案后生成作品。
+        </div>
+      </div>
+      <div class="chat-input">
+        <textarea id="chatInput" placeholder="例如：请介绍系统有哪些 Agent？我想做敦煌档案 HTML 网站…" rows="3"></textarea>
+        <div class="btn-row">
+          <button type="button" class="btn-primary" id="btnSend">发送对话</button>
+          <button type="button" class="btn-gold" id="btnGenerate">生成叙事作品</button>
+          <button type="button" class="btn-ghost" id="btnCancel" style="display:none;">取消生成</button>
+          <button type="button" class="btn-ghost" id="btnClear">清空</button>
+        </div>
+      </div>
+
+      <!-- 产物预览区 -->
+      <div class="output-preview" id="outputPreview" style="display:none;">
+        <h4>生成产物</h4>
+        <div id="outputList"></div>
+      </div>
+
+      <!-- 作品浏览画廊 -->
+      <div class="gallery-browser" id="galleryBrowser">
+        <div class="gallery-tabs" id="galleryTabs"></div>
+        <div class="gallery-content" id="galleryContent"></div>
+      </div>
+    </main>
+
+    <!-- 右侧：系统状态与日志 -->
+    <aside class="panel">
+      <div class="panel-head">系统状态</div>
+      <div class="panel-body">
+        <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:10px">已注册 Agent</p>
+        <div id="agentChips"></div>
+        <p style="font-size:0.8rem;color:var(--text-dim);margin:14px 0 8px">LLM API</p>
+        <ul class="diag-list" id="llmList"></ul>
+        <p style="font-size:0.8rem;color:var(--text-dim);margin:14px 0 8px">执行日志</p>
+        <div class="log-box" id="logBox">等待连接…</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 全屏预览模态框 -->
+  <div class="preview-modal" id="previewModal">
+    <div class="preview-container">
+      <div class="preview-header">
+        <h3 id="previewTitle">作品预览</h3>
+        <button class="preview-close" onclick="closePreviewModal()">&times;</button>
+      </div>
+      <div class="preview-body">
+        <iframe id="previewFrame" src=""></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const apiBaseInput = $("apiBase");
+    
+    // 默认 API 地址始终为 127.0.0.1:8080，可手动修改
+    const defaultApi = "http://127.0.0.1:8080";
+    
+    // 只在用户手动点击"检测连接"成功后更新 localStorage，不自动覆盖
+    apiBaseInput.value = defaultApi;
+    // 清掉旧版 localStorage 中可能错误的 API 地址，避免幽灵劫持
+    localStorage.removeItem("apiBase");
+
+    let chatHistory = [];
+    let uploadedPaths = [];
+    let pendingFiles = [];
+    let isGenerating = false;
+    let currentTaskId = null;
+    let currentOutputs = [];
+    let _autoDetected = null;  // AI 自动识别的主题信息缓存
+    
+    // 产物历史记录管理
+    function saveToHistory(record) {
+      const history = JSON.parse(localStorage.getItem("outputHistory") || "[]");
+      history.unshift(record);
+      if (history.length > 20) history.pop();
+      localStorage.setItem("outputHistory", JSON.stringify(history));
+    }
+    
+    function loadHistory() {
+      return JSON.parse(localStorage.getItem("outputHistory") || "[]");
+    }
+    
+    function showHistory() {
+      const history = loadHistory();
+      if (history.length === 0) {
+        appendMessage("system", "暂无历史记录");
+        return;
+      }
+      let msg = "历史生成记录：\n\n";
+      history.slice(0, 5).forEach((h, i) => {
+        const date = new Date(h.timestamp).toLocaleString();
+        msg += `${i + 1}. ${h.theme} (${date})\n`;
+        msg += `   格式: ${h.formats.join(", ")} | 耗时: ${h.elapsed}s\n`;
+        msg += `   产物: ${h.outputs.length} 个文件\n\n`;
+      });
+      appendMessage("system", msg);
+    }
+    
+    // 对话历史管理
+    function saveChatHistory() {
+      localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+    }
+    
+    function loadChatHistory() {
+      const saved = localStorage.getItem("chatHistory");
+      if (saved) {
+        chatHistory = JSON.parse(saved);
+        chatHistory.forEach(msg => {
+          appendMessage(msg.role, msg.content);
+        });
+      }
+    }
+    
+    // 页面加载时恢复对话历史
+    loadChatHistory();
+
+    // AI 自动识别提示区域
+    const autoHintEl = $("autoHint");
+    autoHintEl.style.cssText = "color: var(--gold); font-size: 0.78rem; margin-top: 6px; padding: 6px 10px; background: rgba(201,168,76,0.08); border-radius: 6px; border-left: 3px solid var(--gold);";
+
+    let autoHintTimer = null;
+    function showAutoHint(msg) {
+      autoHintEl.textContent = msg;
+      autoHintEl.style.display = "block";
+      clearTimeout(autoHintTimer);
+      autoHintTimer = setTimeout(() => { autoHintEl.style.display = "none"; }, 15000);
+    }
+
+    let parseCache = {};
+    let parseDebounceTimer = null;
+
+    const PARSE_PROMPT = `你是一个档案专题解析器。从用户输入中提取档案主题信息。
+只返回合法JSON，不要任何解释文字：
+{"archive_name":"<具体主题名称>","keywords":["<关键词1>","<关键词2>"]}
+重要规则：
+1. archive_name 必须是用户想了解的【具体人名、事件名或组织名】，绝不能是：
+   - 泛化类别词（如"名人档案""红色档案""历史档案"等）
+   - 动作或意图描述词（如"做一个档案""讲述故事""展示事迹"等）
+   - 绝对不能只返回"档案"两个字
+   正确做法：从用户的话里找出具体的【主体名称】
+2. keywords 必须是与该具体主题紧密绑定的专有名词（如人名、成果名、组织名），绝不能包含：
+   - 泛化类别词（名人档案、红色档案、科学家、院士等）
+   - 孤立的时间/地点词（1919、北京、武汉等，除非是专有名词的一部分如"五四运动"）
+   - 宽泛描述词（历史、事迹、故事、发展等）
+   - 超过12个字的长词（如"500米口径球面射电望远镜"应简化为"FAST"或"天眼"）
+   原则：每个关键词单独拿去搜索，都应该返回与该主题直接相关的内容
+3. 例如"给南仁东院士做一个名人档案，展示其生平事迹"→ archive_name="南仁东", keywords=["南仁东","中国天眼","FAST","射电望远镜"]
+4. 例如"为朱英国院士做一个名人档案"→ archive_name="朱英国院士", keywords=["朱英国","杂交水稻","红莲型","武汉大学"]
+5. 例如"讲述程开甲院士的故事，生成名人档案"→ archive_name="程开甲", keywords=["程开甲","两弹一星","核武器","核试验"]
+6. 例如"做一个五四运动红色档案"→ archive_name="五四运动", keywords=["五四运动","新文化运动","反帝反封建"]
+如果看不出档案意图，返回 {"archive_name":null}
+`;
+
+    async function llmParseArchive(text) {
+      if (parseCache[text]) return parseCache[text];
+      try {
+        const r = await fetch(apiBase() + "/api/v2/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: PARSE_PROMPT + "\n\n用户输入：" + text,
+            history: [],
+            archive_name: "档案主题识别",
+            mode: "parse",
+          }),
+        });
+        if (!r.ok) return null;
+        const data = await r.json();
+        const reply = (data.reply || "").trim();
+
+        let jsonStr = reply;
+        const m = reply.match(/\{[\s\S]*\}/);
+        if (m) jsonStr = m[0];
+
+        const parsed = JSON.parse(jsonStr);
+        if (!parsed || !parsed.archive_name) return null;
+
+        // 校验：archive_name 不能是泛化词
+        const forbiddenNames = ["档案", "名人档案", "红色档案", "历史档案", "人物档案", "专题档案", "数字叙事", "叙事作品", "档案数字叙事"];
+        if (forbiddenNames.includes(parsed.archive_name.trim())) return null;
+
+        // 过滤关键词：去掉过长词（>12字）和泛化词
+        const forbiddenKws = new Set(["名人档案", "红色档案", "历史档案", "人物档案", "专题档案", "档案", "名人", "红色", "历史", "人物", "专题", "事迹", "纪念", "展览", "展示", "介绍", "生平", "传记", "院士", "科学家", "教授", "专家", "学者", "英雄", "故事", "经历", "成就", "贡献", "精神", "发展", "回顾", "总结", "概述", "简介"]);
+        let keywords = (parsed.keywords || [parsed.archive_name]).filter(kw => {
+          const t = String(kw).trim();
+          return t.length > 0 && t.length <= 12 && !forbiddenKws.has(t);
+        });
+        if (!keywords.length) keywords = [parsed.archive_name];
+
+        const result = {
+          name: parsed.archive_name || "",
+          keywords: keywords,
+        };
+        parseCache[text] = result;
+        return result;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // 关键词标签管理
+    let _keywordList = [];
+    function renderKeywordTags() {
+      const wrap = $("keywordTags");
+      if (!_keywordList.length) {
+        wrap.innerHTML = '<span style="color:var(--text-dim);font-size:0.75rem;padding:4px 0;">输入聊天内容后自动提取…</span>';
+        return;
+      }
+      wrap.innerHTML = _keywordList.map((kw, i) =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;font-size:0.78rem;color:var(--text);">` +
+        `${escapeHtml(kw)}<button onclick="removeKeyword(${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0 2px;font-size:0.9rem;line-height:1;">&times;</button></span>`
+      ).join("");
+    }
+    window.removeKeyword = (idx) => {
+      _keywordList.splice(idx, 1);
+      renderKeywordTags();
+    };
+    function addKeyword(kw) {
+      const t = kw.trim();
+      if (t && !_keywordList.includes(t)) _keywordList.push(t);
+      renderKeywordTags();
+    }
+    $("btnAddKeyword").addEventListener("click", () => {
+      const input = $("keywordInput");
+      addKeyword(input.value);
+      input.value = "";
+    });
+    $("keywordInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { addKeyword($("keywordInput").value); $("keywordInput").value = ""; }
+    });
+
+    $("chatInput").addEventListener("input", () => {
+      const text = $("chatInput").value.trim();
+      if (!text || text.length < 4) return;
+
+      clearTimeout(parseDebounceTimer);
+      parseDebounceTimer = setTimeout(async () => {
+        const result = await llmParseArchive(text);
+        if (!result || !result.name) return;
+        showAutoHint("已识别: 「" + result.name + "」 关键词: " + result.keywords.slice(0, 6).join("、"));
+        _autoDetected = result;
+        // 同步到左侧关键词区
+        _keywordList = result.keywords.slice(0, 10);
+        renderKeywordTags();
+      }, 800);
+    });
+
+    function getArchiveInfo() {
+      const manualName = $("archiveNameInput").value.trim();
+      const autoName = (_autoDetected && _autoDetected.name) || "";
+      // 如果用户手动输入了名称，优先使用；否则用AI识别的；如果都没有，返回null让调用方处理
+      const name = manualName || autoName || "";
+
+      // 优先使用左侧编辑过的关键词列表
+      let keywords = _keywordList.length ? [..._keywordList] : [];
+      if (!keywords.length && _autoDetected && _autoDetected.keywords) {
+        keywords = [..._autoDetected.keywords];
+      }
+      if (!keywords.length && name) {
+        keywords = [name];
+      }
+      // 确保档案名称在关键词中
+      if (manualName && !keywords.includes(manualName)) {
+        keywords.unshift(manualName);
+      }
+
+      return { type: "custom", name, keywords };
+    }
+
+    function apiBase() {
+      return apiBaseInput.value.replace(/\/$/, "");
+    }
+    function log(msg, agent="", action="", detail="") {
+      const box = $("logBox");
+      const t = new Date().toLocaleTimeString();
+      let entry = `[${t}] `;
+      if (agent) entry += `<span class="agent">${agent}</span> `;
+      if (action) entry += `<span class="action">${action}</span> `;
+      if (detail) entry += `<span class="detail">${detail}</span>`;
+      if (!agent && !action && !detail) entry += msg;
+      box.innerHTML = `<div class="log-entry">${entry}</div>` + box.innerHTML;
+      box.scrollTop = 0;
+    }
+    function setStatus(ok) {
+      $("statusDot").className = "status-dot" + (ok ? " ok" : " err");
+    }
+
+    function appendMessage(role, content) {
+      const wrap = $("messages");
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      const tag = role === "user" ? "您" : role === "assistant" ? "AI Agent" : "";
+      if (tag) div.innerHTML = `<div class="role-tag">${tag}</div>` + escapeHtml(content);
+      else div.textContent = content;
+      wrap.appendChild(div);
+      wrap.scrollTop = wrap.scrollHeight;
+    }
+    function escapeHtml(s) {
+      return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    // 工作流状态更新
+    function setWorkflowStep(step, status, detail="") {
+      const el = $(`wf-step-${step}`);
+      if (!el) return;
+      el.className = "wf-step " + status;
+      const statusEl = el.querySelector(".step-status");
+      if (statusEl) {
+        const labels = { waiting: "等待", running: "执行中...", completed: "完成", failed: "失败" };
+        statusEl.textContent = labels[status] || status;
+        if (detail) statusEl.textContent += " " + detail;
+      }
+    }
+    function resetWorkflow() {
+      [1, 2, 3].forEach(i => setWorkflowStep(i, "waiting"));
+      $("progressBar").style.display = "none";
+      $("progressFill").style.width = "0%";
+    }
+    function updateProgress(percent) {
+      $("progressBar").style.display = "block";
+      $("progressFill").style.width = percent + "%";
+    }
+
+    // 通用的带重试的 fetch 函数
+    async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+      let lastError;
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const response = await fetch(url, options);
+          if (!response.ok && i < maxRetries - 1) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return response;
+        } catch (error) {
+          lastError = error;
+          if (i < maxRetries - 1) {
+            log("", "", "", `请求失败，${2 ** i}秒后重试... (${i + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** i)));
+          }
+        }
+      }
+      throw lastError;
+    }
+
+    async function ping() {
+      const url = apiBase();
+      log("", "", "", "检测 " + url + " ...");
+      try {
+        const r = await fetchWithRetry(url + "/", { signal: AbortSignal.timeout(5000) }, 2);
+        if (!r.ok) throw new Error(r.status);
+        const data = await r.json();
+        localStorage.setItem("apiBase", url);  // 仅在成功时保存
+        setStatus(true);
+        log("", "", "", "已连接: " + data.project + " v" + data.version);
+        loadDiagnostics();
+        return true;
+      } catch (e) {
+        setStatus(false);
+        const isOffline = e.name === "TypeError" || e.message.includes("Failed to fetch") || e.name === "TimeoutError";
+        if (isOffline) {
+          log("", "", "", "API 未启动或无法连接");
+          appendMessage("system", "无法连接到 API 服务。请确保已启动后端：\n\n  cd " + (apiBase().includes("127.0.0.1") ? "项目目录" : apiBase()) + "\n  python api/main.py\n\n或检查 API 地址是否正确。");
+        } else {
+          log("", "", "", "连接失败: " + e.message);
+        }
+        return false;
+      }
+    }
+
+    async function loadDiagnostics() {
+      try {
+        const r = await fetch(apiBase() + "/api/v1/system/diagnostics");
+        const d = await r.json();
+        const agents = d.agents || [];
+        const cntEl = document.querySelector(".panel:last-child .panel-head");
+        if (cntEl) cntEl.textContent = "系统状态（" + agents.length + " Agent）";
+        $("agentChips").innerHTML = agents.map(a =>
+          `<span class="agent-chip" title="${a.layer}">${a.name.replace("Agent","")}</span>`
+        ).join("");
+        $("llmList").innerHTML = (d.llm_providers || []).map(p =>
+          `<li class="${p.available ? 'ok' : ''}">${p.name} ${p.available ? '[OK]' : '[未配置]'}</li>`
+        ).join("");
+      } catch (e) {
+        log("", "", "", "诊断加载失败");
+      }
+    }
+
+    // Upload
+    const dropzone = $("dropzone");
+    const fileInput = $("fileInput");
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      pendingFiles = [...pendingFiles, ...e.dataTransfer.files];
+      renderFileList();
+    });
+    fileInput.addEventListener("change", () => {
+      pendingFiles = [...pendingFiles, ...fileInput.files];
+      renderFileList();
+    });
+
+    function renderFileList() {
+      const el = $("fileList");
+      if (!pendingFiles.length && !uploadedPaths.length) {
+        el.innerHTML = "";
+        $("btnUpload").disabled = true;
+        return;
+      }
+      let html = "";
+      pendingFiles.forEach((f) => {
+        html += `<div class="file-item"><span class="name">${f.name}</span><span class="status pending">待上传</span></div>`;
+      });
+      uploadedPaths.forEach(p => {
+        html += `<div class="file-item"><span class="name">${p.split(/[/\\]/).pop()}</span><span class="status ok">已解析</span></div>`;
+      });
+      el.innerHTML = html;
+      $("btnUpload").disabled = !pendingFiles.length;
+    }
+
+    $("btnUpload").addEventListener("click", async () => {
+      if (!pendingFiles.length) return;
+      const fd = new FormData();
+      pendingFiles.forEach(f => fd.append("files", f));
+      $("btnUpload").disabled = true;
+      log("", "DocumentParser", "开始", "上传并解析 " + pendingFiles.length + " 个文件");
+      try {
+        const r = await fetch(apiBase() + "/api/v1/parse/documents", { method: "POST", body: fd });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || r.statusText);
+        uploadedPaths = [...new Set([...uploadedPaths, ...(data.file_paths || [])])];
+        pendingFiles = [];
+        fileInput.value = "";
+        renderFileList();
+        let preview = "已成功解析档案：\n";
+        (data.previews || []).forEach(p => {
+          preview += `\n【${p.file || p.filename}】\n${(p.preview || p.error || "").slice(0, 200)}…\n`;
+        });
+        appendMessage("assistant", preview);
+        chatHistory.push({ role: "assistant", content: preview });
+        log("", "DocumentParser", "完成", "共 " + uploadedPaths.length + " 个文件");
+      } catch (e) {
+        log("", "DocumentParser", "失败", e.message);
+        appendMessage("system", "档案解析失败: " + e.message);
+      }
+      $("btnUpload").disabled = !pendingFiles.length;
+    });
+
+    $("btnSend").addEventListener("click", sendChat);
+    $("chatInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.ctrlKey) { 
+        e.preventDefault(); 
+        sendChat(); 
+      } else if (e.key === "Enter" && !e.shiftKey) { 
+        e.preventDefault(); 
+        sendChat(); 
+      }
+    });
+
+    async function sendChat() {
+      const text = $("chatInput").value.trim();
+      if (!text) return;
+      if (!(await ping())) {
+        appendMessage("system", "请先启动 API：在项目目录运行 python api/main.py");
+        return;
+      }
+      appendMessage("user", text);
+      chatHistory.push({ role: "user", content: text });
+      saveChatHistory();
+      $("chatInput").value = "";
+      $("btnSend").disabled = true;
+      log("", "", "", "对话请求...");
+
+      const archiveInfo = getArchiveInfo();
+      try {
+        const r = await fetchWithRetry(apiBase() + "/api/v2/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            history: chatHistory.slice(-10),
+            files: uploadedPaths,
+            archive_type: archiveInfo.type,
+            archive_name: archiveInfo.name,
+          }),
+        }, 2);
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
+
+        // 后端检测到生成意图时只提示用户点击生成按钮
+        appendMessage("assistant", data.reply);
+        chatHistory.push({ role: "assistant", content: data.reply });
+        saveChatHistory();
+        if (data.intent === "generate_hint") {
+          log("", "SmartOrchestrator", "提示", "已引导用户点击生成按钮");
+          // 高亮生成按钮，吸引用户注意
+          const btn = $("btnGenerate");
+          btn.style.animation = "pulseGold 0.6s ease-in-out 3";
+          btn.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else {
+          log("", "", "", "对话完成");
+        }
+      } catch (e) {
+        appendMessage("system", "对话错误: " + e.message);
+        log("", "", "", "对话失败: " + e.message);
+      }
+      $("btnSend").disabled = false;
+    }
+
+    // ========== 共享：从后端结果提取并渲染产物 ==========
+    function extractOutputItems(results, backendOutputs) {
+      const items = [];
+      const seen = new Set();
+      function addItem(type, rawPath, url) {
+        const norm = rawPath ? rawPath.replace(/\\/g, "/").replace(/\/+$/, "") : "";
+        if (!norm || seen.has(norm)) return;
+        seen.add(norm);
+        items.push({ type, path: rawPath, url });
+      }
+      function walk(obj) {
+        if (!obj || typeof obj !== "object") return;
+        if (obj.html_path) {
+          const n = obj.html_path.replace(/\\/g, "/");
+          const rel = n.includes("outputs/") ? n.split("outputs/")[1] : n;
+          addItem("HTML 网站", obj.html_path, "/outputs/" + rel);
+        }
+        if (obj.output_files && obj.output_files.threejs) {
+          const n = obj.output_files.threejs.replace(/\\/g, "/");
+          const rel = n.includes("outputs/") ? n.split("outputs/")[1] : n;
+          addItem("3D 展厅", obj.output_files.threejs, "/outputs/" + rel);
+        }
+        for (const [k, v] of Object.entries(obj)) {
+          if (v && typeof v === "object" && k !== "_context") walk(v);
+        }
+      }
+      walk(results || {});
+      for (const o of (backendOutputs || [])) {
+        addItem(o.type, o.path, o.url);
+      }
+      return items;
+    }
+
+    function renderGeneratedOutputs(data) {
+      const outputs = extractOutputItems(data.results, data.outputs);
+      currentOutputs = outputs;
+      if (outputs.length > 0) {
+        $("outputPreview").style.display = "block";
+        const base = apiBase();
+        $("outputList").innerHTML = outputs.map(o => {
+          const fullUrl = (o.url && o.url.startsWith("http")) ? o.url : base + (o.url || "");
+          const isPreviewable = o.type.includes("HTML") || o.type.includes("3D");
+          return `<div class="output-item">
+            <span>${o.type}:</span>
+            <a href="${fullUrl}" target="_blank">${(o.path || "").split(/[/\\]/).pop() || o.type}</a>
+            ${isPreviewable ? `<button class="btn-sm btn-ghost" onclick="openPreviewModal('${fullUrl}', '${o.type}')">预览</button>` : ''}
+          </div>`;
+        }).join("");
+        renderGalleryBrowser(outputs);
+      }
+      return outputs;
+    }
+
+    $("btnGenerate").addEventListener("click", async () => {
+      if (isGenerating) return;
+      const formats = [...document.querySelectorAll("#formatChecks input:checked")].map(c => c.value);
+      if (!formats.length) {
+        alert("请至少选择一种输出格式");
+        return;
+      }
+      if (!(await ping())) return;
+
+      const archiveInfo = getArchiveInfo();
+      // 防护：必须识别到有效主题才能生成
+      if (!archiveInfo.name || archiveInfo.name === "档案") {
+        alert("尚未识别到具体档案主题。请在对话中描述想了解的档案人物/事件，等待左侧出现自动识别的关键词后再点击生成。");
+        $("chatInput").focus();
+        return;
+      }
+      const chatText = $("chatInput").value.trim();
+
+      let userReq, archiveName, archiveType, crawlKeywords;
+
+      if (chatText) {
+        archiveName = archiveInfo.name;
+        archiveType = archiveInfo.type;
+        crawlKeywords = archiveInfo.keywords;
+        if (archiveType === "custom" && crawlKeywords.length <= 1) {
+          const chatKws = chatText.split(/[,，、\s]+/).filter(s => s.length > 1);
+          if (chatKws.length > 0) crawlKeywords = [...new Set([...crawlKeywords, ...chatKws])];
+        }
+        userReq = `为「${archiveName}」生成档案数字叙事作品，专题类型 ${archiveType}，输出格式: ${formats.join("、")}。补充说明: ${chatText}`;
+      } else {
+        userReq = `请为「${archiveInfo.name}」生成数字叙事作品，输出格式：${formats.join("、")}`;
+        archiveName = archiveInfo.name;
+        archiveType = archiveInfo.type;
+        crawlKeywords = archiveInfo.keywords;
+      }
+
+      $("chatInput").value = "";
+
+      appendMessage("user", "[生成任务] " + userReq);
+      appendMessage("system", "SmartOrchestrator 正在调度多 Agent，可能需要数分钟，请稍候...");
+      $("btnGenerate").disabled = true;
+      $("btnGenerate").style.display = "none";
+      $("btnCancel").style.display = "inline-block";
+      isGenerating = true;
+      resetWorkflow();
+
+      const workflowViz = $("workflowViz");
+      workflowViz.innerHTML = '<div class="wf-step" style="color:var(--text-dim);font-size:0.8rem;text-align:center;padding:12px 0">等待编排器规划...</div>';
+      $("progressBar").style.display = "block";
+      $("progressFill").classList.add("indeterminate");
+
+      const abortController = new AbortController();
+      currentTaskId = Date.now();
+
+      $("btnCancel").onclick = () => {
+        abortController.abort();
+        isGenerating = false;
+        $("btnGenerate").disabled = false;
+        $("btnGenerate").style.display = "inline-block";
+        $("btnCancel").style.display = "none";
+        $("progressBar").style.display = "none";
+        $("workflowViz").innerHTML = '<div class="wf-step failed" style="text-align:center;padding:12px 0"><span class="step-status" style="color:var(--err)">任务已取消</span></div>';
+        appendMessage("system", "任务已取消");
+        log("", "", "", "用户取消了任务");
+      };
+
+      try {
+        // Step 1: 提交任务 -> 立即获取 task_id
+        const submitResp = await fetch(apiBase() + "/api/v2/narrative/smart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_request: userReq,
+            files: uploadedPaths,
+            output_formats: formats,
+            archive_type: archiveType,
+            archive_name: archiveName,
+            enable_crawl: $("enableCrawl").checked,
+            crawl_keywords: crawlKeywords,
+          }),
+          signal: abortController.signal
+        });
+        const submitData = await submitResp.json();
+        if (!submitResp.ok) throw new Error(submitData.detail || "Submit failed");
+        const taskId = submitData.task_id;
+        log("", "SmartOrchestrator", "已提交", "任务ID: " + taskId);
+
+        // Step 2: 轮询直到完成
+        let data = null;
+        let lastLogCount = 0;
+        let pollErrors = 0;
+        for (let i = 0; i < 900; i++) {
+          if (abortController.signal.aborted) break;
+          await new Promise(r => setTimeout(r, 2000));
+          let pollData;
+          try {
+            const pollResp = await fetch(apiBase() + "/api/v2/narrative/status/" + taskId);
+            if (!pollResp.ok) throw new Error(`HTTP ${pollResp.status}`);
+            pollData = await pollResp.json();
+            pollErrors = 0; // 成功后重置错误计数
+          } catch (pollErr) {
+            pollErrors++;
+            if (pollErrors >= 5) throw new Error("轮询连续失败5次: " + pollErr.message);
+            continue; // 单次失败跳过，继续轮询
+          }
+          updateProgress(Math.min(95, 10 + i * 3));
+
+          // 实时显示 Agent 执行日志
+          const execLog = pollData.execution_log || [];
+          if (execLog.length > lastLogCount) {
+            const agentLabels = {
+              "planner": "规划器", "WebCrawlerAgent": "网络爬虫",
+              "DocumentParserAgent": "文档解析", "ArchiveAnalysisAgent": "档案分析",
+              "SmartAnalysisAgent": "智能分析", "WebGalleryAgent": "网站生成",
+              "Exhibition3DAgent": "3D展厅生成", "SmartOutputAgent": "输出编排",
+              "orchestrator": "编排器",
+            };
+            for (let li = lastLogCount; li < execLog.length; li++) {
+              const entry = execLog[li];
+              const label = agentLabels[entry.agent] || entry.agent;
+              const actionLabels = { started: "开始", completed: "完成", failed: "失败", error: "出错", planning: "规划中" };
+              const actionLabel = actionLabels[entry.action] || entry.action;
+              log("", label, actionLabel, entry.detail ? entry.detail.substring(0, 80) : "");
+            }
+            lastLogCount = execLog.length;
+
+            // 更新工作流可视化
+            const viz = $("workflowViz");
+            const agentStatus = {};
+            for (const entry of execLog) {
+              const agent = entry.agent;
+              if (entry.action === "started") agentStatus[agent] = "running";
+              else if (entry.action === "completed") agentStatus[agent] = "completed";
+              else if (entry.action === "failed" || entry.action === "error") agentStatus[agent] = "failed";
+            }
+            const uniqueAgents = [...new Set(execLog.map(e => e.agent))];
+            viz.innerHTML = uniqueAgents.map((agent, idx) => {
+              const status = agentStatus[agent] || "waiting";
+              const label = agentLabels[agent] || agent;
+              const labels = { waiting: "等待", running: "执行中...", completed: "完成", failed: "失败" };
+              return `<div class="wf-step ${status}"><span class="step-num">${idx + 1}</span><span class="step-name">${label}</span><span class="step-status">${labels[status] || status}</span></div>`;
+            }).join("");
+          }
+
+          // 显示当前进度文字
+          if (pollData.progress) {
+            log("", "", "", pollData.progress);
+          }
+
+          if (pollData.status === "completed" || pollData.status === "failed") {
+            data = pollData.result || pollData;
+            if (pollData.status === "failed") {
+              const failMsg = pollData.progress || "Task failed";
+              if (failMsg.includes("检查点已保存") || failMsg.includes("断点恢复")) {
+                throw new Error(failMsg + " — 请重新点击生成按钮，系统将从断点继续");
+              }
+              throw new Error(failMsg);
+            }
+            break;
+          }
+        }
+        if (!data) throw new Error("任务超时");
+
+        $("progressFill").classList.remove("indeterminate");
+        updateProgress(100);
+        log("", "SmartOrchestrator", "完成", "耗时 " + (data.elapsed || "?") + " 秒");
+
+        let summary = `编排完成（耗时 ${data.elapsed || "?"} 秒）\n\n`;
+
+        if (data.plan && data.plan.workflow) {
+          const viz = $("workflowViz");
+          viz.innerHTML = "";
+
+          const execLog = data.execution_log || [];
+          const agentStatus = {};
+          for (const entry of execLog) {
+            const agent = entry.agent;
+            if (entry.action === "started") agentStatus[agent] = "running";
+            else if (entry.action === "completed") agentStatus[agent] = "completed";
+            else if (entry.action === "failed" || entry.action === "error") agentStatus[agent] = "failed";
+          }
+
+          data.plan.workflow.forEach((step, idx) => {
+            const agent = step.agent || "";
+            const status = agentStatus[agent] || "waiting";
+            const stepDiv = document.createElement("div");
+            stepDiv.className = "wf-step " + status;
+            const labels = { waiting: "等待", running: "执行中", completed: "完成", failed: "失败" };
+            const statusText = labels[status] || status;
+            stepDiv.innerHTML = `<span class="step-num">${idx + 1}</span><span class="step-name" title="${step.task || ''}">${agent.replace("Agent", "")}</span><span class="step-status">${statusText}</span>`;
+            viz.appendChild(stepDiv);
+            summary += `  ${idx + 1}. ${agent} [${statusText}] → ${step.output_key || ""}\n`;
+          });
+        }
+
+
+        const results = data.results || {};
+
+        if (data.data_source && data.data_source !== "unknown") {
+          summary += `\n数据来源: ${data.data_source}`;
+        }
+
+        // 展示执行日志
+        if (data.execution_log && data.execution_log.length > 0) {
+          summary += `\n\n执行日志：\n`;
+          data.execution_log.slice(-10).forEach(entry => {
+            summary += `  [${entry.agent}] ${entry.action}: ${entry.detail.substring(0, 100)}\n`;
+          });
+        }
+
+        // 提取并渲染产物
+        const outputs = renderGeneratedOutputs(data);
+        if (outputs.length > 0) {
+          summary += `\n\n已生成 ${outputs.length} 个产物文件`;
+        }
+
+        appendMessage("assistant", summary);
+
+        // 保存到历史
+        saveToHistory({
+          timestamp: Date.now(),
+          theme: archiveInfo.name,
+          formats: formats,
+          elapsed: data.elapsed,
+          outputs: outputs.map(o => ({ type: o.type, path: o.path }))
+        });
+
+        log("", "", "", "生成完成");
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          return;
+        }
+        setWorkflowStep(1, "failed");
+        setWorkflowStep(2, "failed");
+        setWorkflowStep(3, "failed");
+        appendMessage("system", "生成失败: " + e.message);
+        log("", "SmartOrchestrator", "失败", e.message);
+      } finally {
+        $("btnGenerate").disabled = false;
+        $("btnGenerate").style.display = "inline-block";
+        $("btnCancel").style.display = "none";
+        isGenerating = false;
+        currentTaskId = null;
+      }
+    });
+
+    // 作品画廊浏览器
+    function renderGalleryBrowser(outputs) {
+      const browser = $("galleryBrowser");
+      const tabs = $("galleryTabs");
+      const content = $("galleryContent");
+      
+      browser.classList.add("active");
+      
+      // 按类型分组
+      const groups = {};
+      outputs.forEach(o => {
+        let cat = "其他";
+        if (o.type.includes("HTML") || o.type.includes("网站")) cat = "网站";
+        else if (o.type.includes("3D")) cat = "3D展厅";
+        else if (o.type.includes("文档")) cat = "文档";
+
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(o);
+      });
+      
+      // 渲染标签
+      const categories = Object.keys(groups);
+      tabs.innerHTML = categories.map((cat, i) => 
+        `<button class="gallery-tab ${i === 0 ? 'active' : ''}" onclick="switchGalleryTab('${cat}')">${cat} (${groups[cat].length})</button>`
+      ).join("");
+      
+      // 渲染内容
+      window._galleryGroups = groups;
+      switchGalleryTab(categories[0]);
+    }
+    
+    window.switchGalleryTab = function(category) {
+      const groups = window._galleryGroups || {};
+      const content = $("galleryContent");
+      const items = groups[category] || [];
+      
+      // 更新标签状态
+      document.querySelectorAll(".gallery-tab").forEach(tab => {
+        tab.classList.toggle("active", tab.textContent.startsWith(category));
+      });
+      
+      // 图标映射
+      const icons = {
+        "网站": "🌐", "文档": "📄", "3D展厅": "🏛️", "其他": "📦"
+      };
+      
+      content.innerHTML = `<div class="gallery-grid">${items.map(o => {
+        const base = apiBase();
+        const fullUrl = (o.url && o.url.startsWith("http")) ? o.url : base + (o.url || "");
+        const isPreviewable = category === "网站" || category === "3D展厅";
+        return `
+          <div class="gallery-card" onclick="${isPreviewable ? `openPreviewModal('${fullUrl}', '${o.type}')` : `window.open('${fullUrl}', '_blank')`}">
+            <div class="card-thumb">${icons[category] || "📦"}</div>
+            <div class="card-info">
+              <div class="card-title">${(o.path || "").split(/[/\\]/).pop() || o.type}</div>
+              <div class="card-meta">${o.type}</div>
+            </div>
+          </div>
+        `;
+      }).join("")}</div>`;
+    };
+
+    // 预览模态框
+    window.openPreviewModal = function(url, title) {
+      const modal = $("previewModal");
+      const frame = $("previewFrame");
+      const titleEl = $("previewTitle");
+      frame.src = url;
+      titleEl.textContent = title || "作品预览";
+      modal.classList.add("active");
+    };
+    
+    window.closePreviewModal = function() {
+      const modal = $("previewModal");
+      const frame = $("previewFrame");
+      frame.src = "";
+      modal.classList.remove("active");
+    };
+    
+    // 点击模态框背景关闭
+    $("previewModal").addEventListener("click", (e) => {
+      if (e.target === $("previewModal")) {
+        closePreviewModal();
+      }
+    });
+
+    $("btnClear").addEventListener("click", () => {
+      chatHistory = [];
+      saveChatHistory();
+      $("messages").innerHTML = '<div class="msg system">对话已清空。</div>';
+      resetWorkflow();
+      $("outputPreview").style.display = "none";
+      $("galleryBrowser").classList.remove("active");
+    });
+
+    $("btnPing").addEventListener("click", ping);
+
+    // 页面加载时自动检测连接
+    window.addEventListener("load", () => {
+      setTimeout(ping, 500);
+    });
+  </script>
+</body>
+</html>

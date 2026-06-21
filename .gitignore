@@ -1,0 +1,30 @@
+# ========== 密钥与配置 ==========
+.env
+*.env.local
+
+# ========== Python 缓存 ==========
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ========== 生成产物 ==========
+outputs/
+
+# ========== 临时与调试文件 ==========
+fix_comments.py
+diagnostics.json
+*.log
+*.tmp
+
+# ========== IDE 与系统文件 ==========
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ========== 虚拟环境 ==========
+venv/
+.venv/
+env/
